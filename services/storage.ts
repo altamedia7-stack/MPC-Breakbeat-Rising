@@ -50,7 +50,7 @@ export const storageService = {
          console.warn("No data in Firebase yet, will try to fall back to local");
       }
     } catch (e: any) {
-      console.error("Firebase Fetch Error, falling back to local:", e);
+      console.warn("Firebase Fetch Error, falling back to local:", e.message || e);
     }
     
     // 2. LOCAL MODE (FALLBACK)
@@ -103,7 +103,7 @@ export const storageService = {
         this._updateLocalCache(data);
         return; // End early if save succeeded
     } catch (e: any) {
-        console.error("Firebase Save Error, saving locally only:", e);
+        console.warn("Firebase Save Error, saving locally only:", e.message || e);
     }
     
     // 2. LOCAL MODE

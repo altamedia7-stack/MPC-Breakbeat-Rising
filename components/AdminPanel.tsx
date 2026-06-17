@@ -931,7 +931,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                         </div>
 
                         {/* WhatsApp Details */}
-                        <div className="glass p-4 rounded-xl border border-white/5">
+                        <div className="glass p-4 rounded-xl border border-white/5 mt-6">
                             <h4 className="text-gray-400 text-xs font-bold uppercase mb-3 flex items-center gap-2">
                                 <MessageCircle size={12} /> WhatsApp Contact
                             </h4>
@@ -955,8 +955,55 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                             )}
                         </div>
 
+                        {/* Spotify Premium Status */}
+                        <div className="glass p-4 rounded-xl border border-white/5 mt-6">
+                            <h4 className="text-gray-400 text-xs font-bold uppercase mb-3 flex items-center gap-2">
+                                <Music size={12} /> Spotify Status
+                            </h4>
+                            <div className="flex flex-col gap-3">
+                                <div className="text-sm font-medium text-white flex items-center justify-between">
+                                    <span>Status Saat Ini:</span>
+                                    <span className="font-bold text-green-400">
+                                        {viewingUser.spotifyPremiumStatus === 'premium' ? 'Premium 🏆' : (viewingUser.spotifyPremiumStatus === 'free' ? 'Free 🎧' : 'Unknown / Belum Terhubung')}
+                                    </span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <select
+                                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-white text-sm"
+                                        value={viewingUser.spotifyPremiumStatus || 'unknown'}
+                                        onChange={async (e) => {
+                                            const newStatus = e.target.value;
+                                            try {
+                                                await storageService.updateUserProfile(viewingUser.id, { spotifyPremiumStatus: newStatus });
+                                                setViewingUser({ ...viewingUser, spotifyPremiumStatus: newStatus as any });
+                                                setUsersList(usersList.map(u => u.id === viewingUser.id ? { ...u, spotifyPremiumStatus: newStatus as any } : u));
+                                            } catch (err) {
+                                                console.error("Failed to update status");
+                                            }
+                                        }}
+                                    >
+                                        <option value="unknown">Unknown</option>
+                                        <option value="free">Free</option>
+                                        <option value="premium">Premium</option>
+                                    </select>
+                                </div>
+                                {viewingUser.spotifyScreenshotUrl && (
+                                    <div className="mt-2">
+                                        <label className="text-[10px] text-gray-500 block mb-1">Bukti Screenshot</label>
+                                        <a href={viewingUser.spotifyScreenshotUrl} target="_blank" rel="noopener noreferrer">
+                                            <img 
+                                                src={viewingUser.spotifyScreenshotUrl} 
+                                                alt="Bukti Screenshot" 
+                                                className="w-full rounded-lg border border-white/10 hover:opacity-80 transition-opacity" 
+                                            />
+                                        </a>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Personal Music */}
-                        <div className="glass p-4 rounded-xl border border-white/5">
+                        <div className="glass p-4 rounded-xl border border-white/5 mt-6">
                             <h4 className="text-gray-400 text-xs font-bold uppercase mb-3 flex items-center gap-2">
                                 <Headphones size={12} /> Personal Music 1
                             </h4>

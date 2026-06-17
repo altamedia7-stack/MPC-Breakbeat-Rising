@@ -3,7 +3,6 @@ import { CheckCircle2, Circle, RefreshCw, Trophy, AlertCircle, Clock, CalendarCh
 import { TargetTrack, User, WeeklySchedule } from '../types';
 import { fetchRecentTracks } from '../services/lastFmService';
 import { storageService } from '../services/storage';
-import { isSpotifyIntegrationEnabled, initiateSpotifyLoginPopup } from '../services/spotifyService';
 import { DEFAULT_SPOTIFY_ID } from '../constants';
 
 interface MemberViewProps {
@@ -29,7 +28,6 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isLinkingSpotify, setIsLinkingSpotify] = useState(false);
   
   // Edit Form State
   const [editAppUsername, setEditAppUsername] = useState('');
@@ -47,6 +45,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const [editPersonalTrack2, setEditPersonalTrack2] = useState('');
   const [editWhatsappName, setEditWhatsappName] = useState('');
   const [editWhatsappNumber, setEditWhatsappNumber] = useState('');
+  const [editSpotifyPremiumStatus, setEditSpotifyPremiumStatus] = useState<'premium' | 'free' | 'unknown'>('unknown');
+  const [editSpotifyScreenshot, setEditSpotifyScreenshot] = useState('');
 
   // Day Selection State
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -333,6 +333,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     setEditPersonalTrack2(currentUser.personalTrack2 || '');
     setEditWhatsappName(currentUser.whatsappName || '');
     setEditWhatsappNumber(currentUser.whatsappNumber || '');
+    setEditSpotifyPremiumStatus(currentUser.spotifyPremiumStatus || 'unknown');
+    setEditSpotifyScreenshot(currentUser.spotifyScreenshotUrl || '');
     setIsEditingProfile(false);
     setIsProfileOpen(true);
   };
@@ -355,6 +357,8 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     setEditPersonalTrack2(currentUser.personalTrack2 || '');
     setEditWhatsappName(currentUser.whatsappName || '');
     setEditWhatsappNumber(currentUser.whatsappNumber || '');
+    setEditSpotifyPremiumStatus(currentUser.spotifyPremiumStatus || 'unknown');
+    setEditSpotifyScreenshot(currentUser.spotifyScreenshotUrl || '');
     setIsEditingProfile(true);
     setIsProfileOpen(true);
   };
@@ -380,7 +384,9 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
         personalArtist2: editPersonalArtist2,
         personalTrack2: editPersonalTrack2,
         whatsappName: editWhatsappName,
-        whatsappNumber: editWhatsappNumber
+        whatsappNumber: editWhatsappNumber,
+        spotifyPremiumStatus: editSpotifyPremiumStatus,
+        spotifyScreenshotUrl: editSpotifyScreenshot
       };
       
       const updatedUser = await storageService.updateUserProfile(currentUser.id, updates);
@@ -396,22 +402,45 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
     }
   };
 
-  const handleLinkSpotify = async () => {
-    try {
-      setIsLinkingSpotify(true);
-      const data = await initiateSpotifyLoginPopup();
-      if (data && data.product) {
-        const updatedUser = await storageService.updateUserProfile(currentUser.id, {
-          spotifyPremiumStatus: data.product,
-          spotifyLinkedAt: new Date().toISOString()
-        });
-        onUpdateUser(updatedUser);
-      }
-    } catch (err: any) {
-      alert("Spotify Link Error: " + err.message);
-    } finally {
-      setIsLinkingSpotify(false);
+  const handleScreenshotUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        alert('Tolong upload file berupa gambar.');
+        return;
     }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            // max dimension 800px
+            const maxDim = 800;
+            if (width > height && width > maxDim) {
+                height *= maxDim / width;
+                width = maxDim;
+            } else if (height > maxDim) {
+                width *= maxDim / height;
+                height = maxDim;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+
+            // Compress as JPEG with 0.6 quality to save space
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+            setEditSpotifyScreenshot(compressedBase64);
+        };
+        img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   const progress = calculateProgress();
@@ -790,6 +819,37 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                      <div className="border-t border-white/10 my-4"></div>
 
                      <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Bukti Screenshot Spotify (Sama dengan Last.fm)</label>
+                        <div className="flex flex-col gap-2">
+                           {editSpotifyScreenshot && (
+                               <div className="w-full h-32 rounded-xl border border-white/10 overflow-hidden relative group">
+                                   <img src={editSpotifyScreenshot} alt="Bukti" className="w-full h-full object-cover" />
+                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                       <button 
+                                           onClick={() => setEditSpotifyScreenshot('')}
+                                           className="bg-red-500/80 text-white p-2 rounded-full hover:bg-red-500"
+                                       >
+                                           <Trash2 size={16} />
+                                       </button>
+                                   </div>
+                               </div>
+                           )}
+                           <label className="w-full bg-black/40 border border-white/10 hover:border-white/30 transition-colors border-dashed rounded-xl px-3 py-4 text-gray-400 text-sm text-center cursor-pointer flex flex-col items-center justify-center gap-2">
+                               <Smartphone size={20} />
+                               <span>{editSpotifyScreenshot ? 'Ganti Screenshot' : 'Upload Bukti Screenshot'}</span>
+                               <input 
+                                   type="file" 
+                                   accept="image/*" 
+                                   onChange={handleScreenshotUpload} 
+                                   className="hidden"
+                               />
+                           </label>
+                        </div>
+                     </div>
+
+                     <div className="border-t border-white/10 my-4"></div>
+
+                     <div>
                         <label className="text-xs font-bold text-gray-500 uppercase block mb-1">My Music 1</label>
                         <div className="space-y-2">
                             {/* Artist Input */}
@@ -1026,22 +1086,12 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                         <div className="overflow-hidden w-full flex justify-between items-center text-left">
                            <div>
                                <div className="text-xs text-gray-500 font-bold uppercase truncate">Akun Spotify</div>
-                               <div className="font-bold text-white truncate">
+                               <div className="font-bold text-white truncate mt-1">
                                    {currentUser.spotifyPremiumStatus 
-                                      ? (currentUser.spotifyPremiumStatus === 'premium' ? 'Premium 🏆' : 'Free 🎧')
-                                      : 'Belum Terhubung'}
+                                      ? (currentUser.spotifyPremiumStatus === 'premium' ? 'Premium 🏆' : (currentUser.spotifyPremiumStatus === 'free' ? 'Free 🎧' : 'Belum Terhubung / Unknown'))
+                                      : 'Belum Terhubung / Unknown'}
                                </div>
                            </div>
-                           
-                           {isSpotifyIntegrationEnabled && (
-                             <button
-                               onClick={handleLinkSpotify}
-                               disabled={isLinkingSpotify}
-                               className="text-[10px] text-green-400 font-bold bg-green-900/20 hover:bg-green-800/40 border border-green-500/30 px-3 py-1.5 rounded-full shrink-0 transition-colors"
-                             >
-                               {isLinkingSpotify ? 'Menghubungkan...' : (currentUser.spotifyPremiumStatus ? 'PerbaruiStatus' : 'Deteksi Premium')}
-                             </button>
-                           )}
                         </div>
                      </div>
 

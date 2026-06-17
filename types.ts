@@ -55,6 +55,7 @@ export interface User {
   patchedDates?: string[]; // Dates that were patched using extra points
   spotifyPremiumStatus?: 'premium' | 'free' | 'unknown';
   spotifyLinkedAt?: string;
+  spotifyScreenshotUrl?: string;
 }
 
 export interface CloudConfig {
