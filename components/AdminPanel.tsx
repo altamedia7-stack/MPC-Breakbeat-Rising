@@ -972,11 +972,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
                                         className="flex-1 bg-black/40 border border-white/10 rounded-lg px-2 py-1 text-white text-sm"
                                         value={viewingUser.spotifyPremiumStatus || 'unknown'}
                                         onChange={async (e) => {
-                                            const newStatus = e.target.value;
+                                            const newStatus = e.target.value as 'premium' | 'free' | 'unknown';
                                             try {
                                                 await storageService.updateUserProfile(viewingUser.id, { spotifyPremiumStatus: newStatus });
-                                                setViewingUser({ ...viewingUser, spotifyPremiumStatus: newStatus as any });
-                                                setUsersList(usersList.map(u => u.id === viewingUser.id ? { ...u, spotifyPremiumStatus: newStatus as any } : u));
+                                                setViewingUser({ ...viewingUser, spotifyPremiumStatus: newStatus });
+                                                setUsersList(usersList.map(u => u.id === viewingUser.id ? { ...u, spotifyPremiumStatus: newStatus } : u));
                                             } catch (err) {
                                                 console.error("Failed to update status");
                                             }

@@ -1,9 +1,7 @@
 import { User, TargetTrack, CloudConfig, AppData, WeeklySchedule, DayConfig } from '../types';
 import { STORAGE_KEY, STORAGE_KEY_USERS, STORAGE_KEY_CLOUD, STORAGE_KEY_SPOTIFY, DEFAULT_TRACKS, DEFAULT_CLOUD_CONFIG, DEFAULT_SPOTIFY_ID, ADMIN_PIN } from '../constants';
-import { db } from './firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-// --- CLOUD STORAGE SERVICE (Firebase Firestore Adapter) ---
+// --- CLOUD STORAGE SERVICE (API Proxy Backend Adapter) ---
 
 export const storageService = {
   
@@ -22,7 +20,7 @@ export const storageService = {
     localStorage.removeItem(STORAGE_KEY_CLOUD);
   },
 
-  // Verify connection validity before saving (now just returns true for Firebase)
+  // Verify connection validity before saving (now just returns true for API)
   async verifyConnection(binId: string, apiKey: string): Promise<{valid: boolean; message?: string}> {
       return { valid: true };
   },
@@ -31,14 +29,12 @@ export const storageService = {
 
   async _fetchFullData(): Promise<AppData> {
     
-    // 1. CLOUD MODE (FIREBASE)
+    // 1. BACKEND API MODE
     try {
-      const docRef = doc(db, 'appData', 'main');
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const record = docSnap.data();
-        return {
+      const res = await fetch('/api/data');
+      if (res.ok) {
+        const record = await res.json();
+        const data: AppData = {
             users: Array.isArray(record.users) ? record.users : [],
             tracks: Array.isArray(record.tracks) ? record.tracks : (record.tracks || DEFAULT_TRACKS),
             spotifyPlaylistId: record.spotifyPlaylistId || DEFAULT_SPOTIFY_ID,
@@ -46,12 +42,12 @@ export const storageService = {
             adminPin: record.adminPin || ADMIN_PIN,
             dailyUsedLastFmAccounts: record.dailyUsedLastFmAccounts || {}
         };
-      } else {
-         console.warn("No data in Firebase yet, will try to fall back to local");
+        // Sync local cache
+        this._updateLocalCache(data);
+        return data;
       }
     } catch (e: any) {
-      console.error("FIREBASE FETCH ERROR:", e);
-      console.warn("Firebase Fetch Error, falling back to local:", e.message || e);
+      console.error("API FETCH ERROR:", e);
     }
     
     // 2. LOCAL MODE (FALLBACK)
@@ -83,10 +79,14 @@ export const storageService = {
       dailyUsedLastFmAccounts
     };
 
-    // Auto-seed Firebase so we don't lose the local fallback data on next fetches from other devices
+    // Auto-seed API so we don't lose the local fallback data on next fetches from other devices
     try {
-      if (typeof db !== "undefined" && users.length > 0) {
-        setDoc(doc(db, 'appData', 'main'), localData).catch(() => {});
+      if (users.length > 0) {
+        fetch('/api/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(localData)
+        }).catch(() => {});
       }
     } catch(e) {}
 
@@ -95,21 +95,22 @@ export const storageService = {
 
   async _saveFullData(data: AppData): Promise<void> {
 
-    // 1. CLOUD MODE (FIREBASE)
+    // 1. BACKEND API MODE
     try {
-        const docRef = doc(db, 'appData', 'main');
-        // Remove ANY undefined values using JSON parse/stringify
         const cleanData = JSON.parse(JSON.stringify(data));
-        await setDoc(docRef, cleanData);
+        const res = await fetch('/api/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cleanData)
+        });
         
-        console.log("SUCCESSFULLY SAVED TO FIREBASE!");
-        
-        // Update local cache
-        this._updateLocalCache(data);
-        return; // End early if save succeeded
+        if (res.ok) {
+          console.log("SUCCESSFULLY SAVED TO BACKEND API!");
+          this._updateLocalCache(data);
+          return; // End early if save succeeded
+        }
     } catch (e: any) {
-        console.error("FIREBASE ERROR DETAIL:", e);
-        console.warn("Firebase Save Error, saving locally only:", e.message || e);
+        console.error("API SAVE ERROR DETAIL:", e);
     }
     
     // 2. LOCAL MODE

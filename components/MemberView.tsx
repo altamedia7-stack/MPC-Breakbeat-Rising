@@ -74,7 +74,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
              if (!resp.ok) throw new Error('Failed to fetch spotify profile');
              const data = await resp.json();
              
-             const status = (data.product === 'premium') ? 'premium' : ((data.product === 'free' || data.product === 'open') ? 'free' : 'unknown');
+             const status: 'premium' | 'free' | 'unknown' = (data.product === 'premium') ? 'premium' : ((data.product === 'free' || data.product === 'open') ? 'free' : 'unknown');
 
              const updates = { 
                  spotifyPremiumStatus: status,
@@ -96,7 +96,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   }, [currentUser, onUpdateUser]);
 
   const handleConnectSpotify = () => {
-    const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+    const clientId = (import.meta as any).env?.VITE_SPOTIFY_CLIENT_ID;
     if (!clientId) {
        alert("Spotify Client ID is not configured di .env.");
        return;
@@ -869,7 +869,7 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                      {currentUser.spotifyLinkedAt ? (
                          <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 flex items-center gap-3">
                              <div className="bg-green-500/20 p-2 rounded-full">
-                                 <Check size={20} className="text-green-500" />
+                                 <CheckCircle2 size={20} className="text-green-500" />
                              </div>
                              <div>
                                  <p className="text-sm text-green-400 font-bold mb-0.5">Spotify Terhubung</p>
