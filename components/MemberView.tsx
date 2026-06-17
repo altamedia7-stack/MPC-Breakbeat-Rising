@@ -866,34 +866,46 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                      </div>
                      <div className="border-t border-white/10 my-4"></div>
 
-                     <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Bukti Screenshot Spotify (Sama dengan Last.fm)</label>
-                        <div className="flex flex-col gap-2">
-                           {editSpotifyScreenshot && (
-                               <div className="w-full h-32 rounded-xl border border-white/10 overflow-hidden relative group">
-                                   <img src={editSpotifyScreenshot} alt="Bukti" className="w-full h-full object-cover" />
-                                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                       <button 
-                                           onClick={() => setEditSpotifyScreenshot('')}
-                                           className="bg-red-500/80 text-white p-2 rounded-full hover:bg-red-500"
-                                       >
-                                           <Trash2 size={16} />
-                                       </button>
+                     {currentUser.spotifyLinkedAt ? (
+                         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 flex items-center gap-3">
+                             <div className="bg-green-500/20 p-2 rounded-full">
+                                 <Check size={20} className="text-green-500" />
+                             </div>
+                             <div>
+                                 <p className="text-sm text-green-400 font-bold mb-0.5">Spotify Terhubung</p>
+                                 <p className="text-xs text-green-500/80">Anda tidak perlu mengunggah bukti screenshot karena akun telah disinkronisasi.</p>
+                             </div>
+                         </div>
+                     ) : (
+                         <div>
+                            <label className="text-xs font-bold text-gray-500 uppercase block mb-1">Bukti Screenshot Spotify (Atau Last.fm)</label>
+                            <div className="flex flex-col gap-2">
+                               {editSpotifyScreenshot && (
+                                   <div className="w-full h-32 rounded-xl border border-white/10 overflow-hidden relative group">
+                                       <img src={editSpotifyScreenshot} alt="Bukti" className="w-full h-full object-cover" />
+                                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                           <button 
+                                               onClick={() => setEditSpotifyScreenshot('')}
+                                               className="bg-red-500/80 text-white p-2 rounded-full hover:bg-red-500"
+                                           >
+                                               <Trash2 size={16} />
+                                           </button>
+                                       </div>
                                    </div>
-                               </div>
-                           )}
-                           <label className="w-full bg-black/40 border border-white/10 hover:border-white/30 transition-colors border-dashed rounded-xl px-3 py-4 text-gray-400 text-sm text-center cursor-pointer flex flex-col items-center justify-center gap-2">
-                               <Smartphone size={20} />
-                               <span>{editSpotifyScreenshot ? 'Ganti Screenshot' : 'Upload Bukti Screenshot'}</span>
-                               <input 
-                                   type="file" 
-                                   accept="image/*" 
-                                   onChange={handleScreenshotUpload} 
-                                   className="hidden"
-                               />
-                           </label>
-                        </div>
-                     </div>
+                               )}
+                               <label className="w-full bg-black/40 border border-white/10 hover:border-white/30 transition-colors border-dashed rounded-xl px-3 py-4 text-gray-400 text-sm text-center cursor-pointer flex flex-col items-center justify-center gap-2">
+                                   <Smartphone size={20} />
+                                   <span>{editSpotifyScreenshot ? 'Ganti Screenshot' : 'Upload Bukti Screenshot'}</span>
+                                   <input 
+                                       type="file" 
+                                       accept="image/*" 
+                                       onChange={handleScreenshotUpload} 
+                                       className="hidden"
+                                   />
+                               </label>
+                            </div>
+                         </div>
+                     )}
 
                      <div className="border-t border-white/10 my-4"></div>
 
