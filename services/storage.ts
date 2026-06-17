@@ -50,6 +50,7 @@ export const storageService = {
          console.warn("No data in Firebase yet, will try to fall back to local");
       }
     } catch (e: any) {
+      console.error("FIREBASE FETCH ERROR:", e);
       console.warn("Firebase Fetch Error, falling back to local:", e.message || e);
     }
     
