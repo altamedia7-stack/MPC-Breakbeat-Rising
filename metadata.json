@@ -1,5 +1,6 @@
 {
   "name": "MPC Breakbeat Rising",
   "description": "A community music streaming validation tool with Admin/Member roles, Last.fm integration, and neon glassmorphism UI.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

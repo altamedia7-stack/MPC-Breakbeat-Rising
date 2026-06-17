@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import fs from "fs";
+import { saveAppDataToCloud, loadAppDataFromCloud } from "./db-cloud-sync.ts";
 
 async function startServer() {
   const app = express();
@@ -11,6 +12,7 @@ async function startServer() {
   app.use(express.json({ limit: '10mb' }));
 
   const DATA_FILE = path.join(process.cwd(), 'appData.json');
+  let isCloudLoaded = false;
 
   // Load / Initialize data file
   const getInitialData = () => {
@@ -28,7 +30,7 @@ async function startServer() {
     };
   };
 
-  const loadData = () => {
+  const loadDataLocal = () => {
     try {
       if (fs.existsSync(DATA_FILE)) {
         const content = fs.readFileSync(DATA_FILE, 'utf8');
@@ -40,7 +42,7 @@ async function startServer() {
     return getInitialData();
   };
 
-  const saveData = (data: any) => {
+  const saveDataLocal = (data: any) => {
     try {
       fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf8');
       return true;
@@ -51,18 +53,44 @@ async function startServer() {
   };
 
   // API Route: Get data
-  app.get("/api/data", (req, res) => {
-    res.json(loadData());
+  app.get("/api/data", async (req, res) => {
+    if (!isCloudLoaded) {
+      console.log("[Server] First request: Fetching newest data from Cloud Auth sync storage...");
+      try {
+        const cloudData = await loadAppDataFromCloud();
+        if (cloudData) {
+          console.log("[Server] Cloud data found! Hydrating local appData.json...");
+          saveDataLocal(cloudData);
+        } else {
+          console.log("[Server] No cloud backup found (or new project). Using local initial state.");
+        }
+      } catch (e) {
+        console.error("[Server] Error loading from cloud backup:", e);
+      }
+      isCloudLoaded = true;
+    }
+    res.json(loadDataLocal());
   });
 
   // API Route: Save data
-  app.post("/api/data", (req, res) => {
+  app.post("/api/data", async (req, res) => {
     const data = req.body;
     if (!data) {
       return res.status(400).json({ error: "Missing body" });
     }
-    const success = saveData(data);
+    const success = saveDataLocal(data);
     if (success) {
+      // Background upload to Cloud
+      saveAppDataToCloud(data).then(syncSuccess => {
+        if (syncSuccess) {
+          console.log("[Server] Successfully backed up active state to Cloud Auth Sync.");
+        } else {
+          console.warn("[Server] Cloud Sync warning: Update failed to backup.");
+        }
+      }).catch(err => {
+        console.error("[Server] Cloud Sync threw exception:", err);
+      });
+
       res.json({ success: true });
     } else {
       res.status(500).json({ error: "Failed to write data" });
