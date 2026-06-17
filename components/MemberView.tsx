@@ -58,6 +58,54 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
   const spotifyId = dayConfig.spotifyId || DEFAULT_SPOTIFY_ID;
 
   // Calculate Check-in status dynamically
+  
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      const origin = event.origin;
+      if (!origin.endsWith('.run.app') && !origin.includes('localhost')) {
+        return;
+      }
+      if (event.data?.type === 'SPOTIFY_AUTH_SUCCESS') {
+         const token = event.data.token;
+         try {
+             const resp = await fetch('https://api.spotify.com/v1/me', {
+                 headers: { Authorization: `Bearer ${token}` }
+             });
+             if (!resp.ok) throw new Error('Failed to fetch spotify profile');
+             const data = await resp.json();
+             
+             const status = (data.product === 'premium') ? 'premium' : ((data.product === 'free' || data.product === 'open') ? 'free' : 'unknown');
+
+             const updates = { 
+                 spotifyPremiumStatus: status,
+                 spotifyLinkedAt: new Date().toISOString()
+             };
+             // update local state so UI reflects
+             setEditSpotifyPremiumStatus(status);
+             const updatedUser = await storageService.updateUserProfile(currentUser.id, updates);
+             onUpdateUser(updatedUser);
+             alert(`Berhasil terhubung ke Spotify! Status akunmu: ${status === 'premium' ? 'Premium' : 'Free'}`);
+         } catch (e) {
+             console.error(e);
+             alert('Gagal mengambil data dari Spotify.');
+         }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [currentUser, onUpdateUser]);
+
+  const handleConnectSpotify = () => {
+    const clientId = import.meta.env.VITE_SPOTIFY_CLIENT_ID;
+    if (!clientId) {
+       alert("Spotify Client ID is not configured di .env.");
+       return;
+    }
+    const redirectUri = window.location.origin + '/';
+    const scopes = 'user-read-private user-read-email';
+    const authUrl = `https://accounts.spotify.com/authorize?response_type=token&client_id=${clientId}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(redirectUri)}&show_dialog=true`;
+    window.open(authUrl, 'spotify_auth_popup', 'width=600,height=700');
+  };
   const selectedDateStr = selectedDate.toLocaleDateString();
   const possibleDates = [
     selectedDate.toLocaleDateString(),
@@ -1092,6 +1140,12 @@ export const MemberView: React.FC<MemberViewProps> = ({ weeklySchedule, currentU
                                       : 'Belum Terhubung / Unknown'}
                                </div>
                            </div>
+                           <button 
+                               onClick={handleConnectSpotify}
+                               className="text-[10px] text-white font-bold bg-[#1DB954] hover:bg-[#1ed760] transition-colors rounded-full px-3 py-1.5 flex items-center gap-1 shrink-0"
+                           >
+                               <Smartphone size={12} /> Sync Spotify
+                           </button>
                         </div>
                      </div>
 
