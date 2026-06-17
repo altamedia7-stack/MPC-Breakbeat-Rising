@@ -97,12 +97,17 @@ export const storageService = {
     // 1. CLOUD MODE (FIREBASE)
     try {
         const docRef = doc(db, 'appData', 'main');
-        await setDoc(docRef, data);
+        // Remove ANY undefined values using JSON parse/stringify
+        const cleanData = JSON.parse(JSON.stringify(data));
+        await setDoc(docRef, cleanData);
+        
+        console.log("SUCCESSFULLY SAVED TO FIREBASE!");
         
         // Update local cache
         this._updateLocalCache(data);
         return; // End early if save succeeded
     } catch (e: any) {
+        console.error("FIREBASE ERROR DETAIL:", e);
         console.warn("Firebase Save Error, saving locally only:", e.message || e);
     }
     
